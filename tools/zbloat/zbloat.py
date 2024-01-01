@@ -44,7 +44,7 @@ def format_bytes(bytes, prec=1):
 
 
 def get_hint_marker(filename):
-    HINTS = ['renderer', 'libfilament-jni']
+    HINTS = ['renderer', 'libfilament.1.48-jni']
     hints = [hint in filename for hint in HINTS]
     return '*' if True in hints else ' '
 

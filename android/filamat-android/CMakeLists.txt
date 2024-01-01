@@ -39,10 +39,10 @@ include_directories(${FILAMENT_DIR}/include)
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_SOURCE_DIR}/libfilamat-jni.map")
 
-add_library(filamat-jni SHARED src/main/cpp/MaterialBuilder.cpp)
-target_include_directories(filamat-jni PRIVATE ${FILAMAT_INCLUDE_DIRS})
+add_library(filamat.1.48-jni SHARED src/main/cpp/MaterialBuilder.cpp)
+target_include_directories(filamat.1.48-jni PRIVATE ${FILAMAT_INCLUDE_DIRS})
 
-target_link_libraries(filamat-jni
+target_link_libraries(filamat.1.48-jni
         ${FILAMAT_FLAVOR}
         filabridge
         shaders

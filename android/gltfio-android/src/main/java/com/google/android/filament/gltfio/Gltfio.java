@@ -25,6 +25,6 @@ public class Gltfio {
     public static void init() {
         // Load Filament first to ensure that the NioUtils Java class is available in the JNIEnv.
         Filament.init();
-        System.loadLibrary("gltfio-jni");
+        System.loadLibrary("gltfio.1.48-jni");
     }
 }

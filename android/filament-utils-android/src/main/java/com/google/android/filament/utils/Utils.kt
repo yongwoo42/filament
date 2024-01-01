@@ -25,6 +25,6 @@ object Utils {
     fun init() {
         // Load Filament first to ensure that the NioUtils Java class is available in the JNIEnv.
         Filament.init()
-        System.loadLibrary("filament-utils-jni")
+        System.loadLibrary("filament-utils.1.48-jni")
     }
 }

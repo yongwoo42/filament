@@ -60,7 +60,7 @@ endif()
 set(VERSION_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/libfilament-jni.map")
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${VERSION_SCRIPT}")
 
-add_library(filament-jni SHARED
+add_library(filament.1.48-jni SHARED
     src/main/cpp/BufferObject.cpp
     src/main/cpp/Camera.cpp
     src/main/cpp/Colors.cpp
@@ -100,7 +100,7 @@ add_library(filament-jni SHARED
 )
 
 # Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
-target_link_libraries(filament-jni
+target_link_libraries(filament.1.48-jni
     PRIVATE filament
     PRIVATE backend
     PRIVATE filaflat
@@ -123,7 +123,7 @@ target_link_libraries(filament-jni
     $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
 )
 
-target_include_directories(filament-jni PRIVATE
+target_include_directories(filament.1.48-jni PRIVATE
         ..
         ${FILAMENT_DIR}/include
         ../../filament/backend/include
@@ -131,4 +131,4 @@ target_include_directories(filament-jni PRIVATE
         ../../libs/utils/include)
 
 # Force a relink when the version script is changed:
-set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
+set_target_properties(filament.1.48-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})

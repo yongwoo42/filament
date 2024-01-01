@@ -32,7 +32,7 @@ set_target_properties(iblprefilter PROPERTIES IMPORTED_LOCATION
 
 set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.map")
 
-add_library(filament-utils-jni SHARED
+add_library(filament-utils.1.48-jni SHARED
         src/main/cpp/AutomationEngine.cpp
         src/main/cpp/Bookmark.cpp
         src/main/cpp/HDRLoader.cpp
@@ -49,21 +49,21 @@ add_library(filament-utils-jni SHARED
         ../common/NioUtils.cpp
 )
 
-target_compile_definitions(filament-utils-jni PUBLIC IMAGEIO_LITE=1)
+target_compile_definitions(filament-utils.1.48-jni PUBLIC IMAGEIO_LITE=1)
 
-target_include_directories(filament-utils-jni PRIVATE
+target_include_directories(filament-utils.1.48-jni PRIVATE
         ${FILAMENT_DIR}/include
         ..
         ../../filament/backend/include
         ${IMAGEIO_DIR}/include
         ../../libs/utils/include)
 
-set_target_properties(filament-utils-jni PROPERTIES LINK_DEPENDS
+set_target_properties(filament-utils.1.48-jni PROPERTIES LINK_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/libfilament-utils-jni.symbols)
 
 # The ordering in the following list is important because CMake does not have dependency information.
-target_link_libraries(filament-utils-jni
-        gltfio-jni
+target_link_libraries(filament-utils.1.48-jni
+        gltfio.1.48-jni
         civetweb
         camutils
         iblprefilter

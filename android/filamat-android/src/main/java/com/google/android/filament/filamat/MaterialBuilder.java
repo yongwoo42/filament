@@ -33,7 +33,7 @@ public class MaterialBuilder {
     private static Method sGetNativeJobSystemMethod = null;
 
     static {
-        System.loadLibrary("filamat-jni");
+        System.loadLibrary("filamat.1.48-jni");
         try {
             sEngineClass = Class.forName("com.google.android.filament.Engine");
             sGetNativeJobSystemMethod = sEngineClass.getDeclaredMethod("getNativeJobSystem");

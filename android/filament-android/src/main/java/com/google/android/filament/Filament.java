@@ -19,7 +19,7 @@ package com.google.android.filament;
 public class Filament {
     static {
         Platform.get();
-        System.loadLibrary("filament-jni");
+        System.loadLibrary("filament.1.48-jni");
     }
 
     private Filament() {
