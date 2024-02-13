@@ -262,9 +262,9 @@ static void createQuadRenderable(QuadInfo &quadInfo) {
 
 
 static void setup(Engine* engine, View* view, Scene* scene) {
-    Texture* basecolor = loadImage(engine, "assets/wind/Windblow_fix.png");
-    Texture* alphaChannel = loadImage(engine, "assets/wind/Windblow_fix-gradation.png");
-    Texture* quadTexture = loadImage(engine, "assets/wind/hvac_panel_front_bg.png");
+    Texture* basecolor = loadImage(engine, "wind_assets/Windblow_fix.png");
+    Texture* alphaChannel = loadImage(engine, "wind_assets/Windblow_fix-gradation.png");
+    Texture* quadTexture = loadImage(engine, "wind_assets/hvac_panel_front_bg.png");
     if (!basecolor || !alphaChannel || !quadTexture) {
         std::cerr << "Texture image missing" << std::endl;
         return;
@@ -315,7 +315,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 }
 
 int main(int argc, char* argv[]) {
-    utils::Path filename = "./assets/wind/wind.filamesh";
+    utils::Path filename = "wind_assets/wind.filamesh";
     if (!filename.exists()) {
         std::cerr << "file not found!" << std::endl;
         return 1;
@@ -326,7 +326,10 @@ int main(int argc, char* argv[]) {
     
     FilamentApp& filamentApp = FilamentApp::get();
 
-    filamentApp.run(g_config, setup, cleanup);
+    filamentApp.run(g_config, setup, cleanup,
+        FilamentApp::ImGuiCallback(),
+        FilamentApp::PreRenderCallback(),
+        FilamentApp::PostRenderCallback(), 2560, 980);
 
     return 0;
 }

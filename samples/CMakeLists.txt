@@ -39,6 +39,7 @@ set(MATERIAL_SRCS
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
+        materials/airVent.mat
 )
 
 if (CMAKE_CROSSCOMPILING)
@@ -227,6 +228,12 @@ endif()
 
 target_sources(gltf-wind-resources PRIVATE ${RESGEN_SOURCE})
 
+# ==================================================================================================
+# Resources for gltf_viewer and gltf_instances
+# ==================================================================================================
+
+target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
+
 
 # ==================================================================================================
 # Compiler flags
@@ -281,6 +288,7 @@ if (NOT ANDROID)
     add_demo(vbotest)
     add_demo(viewtest)
 	add_demo(gltf_wind)
+    add_demo(wind_jit_view)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
@@ -292,6 +300,7 @@ if (NOT ANDROID)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
+    target_link_libraries(wind_jit_view PRIVATE filameshio imageio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
