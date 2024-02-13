@@ -473,9 +473,10 @@ if (WIN32 OR WEBGL OR IOS)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
 endif()
-if (FILAMENT_SUPPORTS_VULKAN)
-    add_definitions(-DFILAMENT_DRIVER_SUPPORTS_VULKAN)
-endif()
+# disable vulkan for testing in nvidia docker
+#if (FILAMENT_SUPPORTS_VULKAN)
+#    add_definitions(-DFILAMENT_DRIVER_SUPPORTS_VULKAN)
+#endif()
 
 # Build with Metal support on non-WebGL Apple platforms.
 if (APPLE AND NOT WEBGL)
