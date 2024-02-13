@@ -202,6 +202,33 @@ endif()
 target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Resources for gltf_wind
+# ==================================================================================================
+add_library(gltf-wind-resources ${DUMMY_SRC})
+set_target_properties(gltf-wind-resources PROPERTIES FOLDER Samples/Resources)
+
+set(GLTF_WIND_RESOURCES
+    ${ROOT_DIR}/assets/models/wind/wind_single.glb
+    ${MATERIAL_DIR}/airVent.filamat
+)
+
+get_resgen_vars(${RESOURCE_DIR} gltf_wind)
+
+add_custom_command(
+	OUTPUT ${RESGEN_OUTPUTS}
+	COMMAND resgen ${RESGEN_FLAGS} ${GLTF_WIND_RESOURCES}
+	DEPENDS resgen ${GLTF_WIND_RESOURCES}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+
+target_sources(gltf-wind-resources PRIVATE ${RESGEN_SOURCE})
+
+
+# ==================================================================================================
 # Compiler flags
 # ==================================================================================================
 
@@ -253,11 +280,13 @@ if (NOT ANDROID)
     add_demo(texturedquad)
     add_demo(vbotest)
     add_demo(viewtest)
+	add_demo(gltf_wind)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(gltf_instances PRIVATE gltf-demo-resources uberarchive gltfio viewer)
+    target_link_libraries(gltf_wind PRIVATE gltf-wind-resources uberarchive gltfio viewer)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(image_viewer PRIVATE viewer imageio)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)

@@ -1,0 +1,81 @@
+material {
+    name : WindMaterial,
+    shadingModel : lit,
+    doubleSided: true,
+    blending: fade,
+    transparency: twoPassesTwoSides,
+    parameters : [
+        {
+            type : sampler2d,
+            name : BASECOLOR_MAP
+        },
+        {
+            type : sampler2d,
+            name : ALPHACOLOR_MAP
+        },
+        {
+            type : float,
+            name : EMISSIVE_STRENGTH
+        },
+        {
+            type : float,
+            name : IOR
+        },
+        {
+            type : float,
+            name : ROUGHNESS
+        }
+    ],
+    requires : [
+        uv0
+    ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        vec4 vertexCoord = material.worldPosition;
+
+        vec2 origin1 = vertexCoord.xz + vec2(50.0, 50.0);
+        vec2 origin2 = vertexCoord.xz + vec2(-50.0, 50.0);
+        vec2 origin3 = vertexCoord.xz + vec2(50.0, -50.0);
+        vec2 origin4 = vertexCoord.xz + vec2(-50.0, -50.0);
+
+        float distance1 = length(origin1);
+        float distance2 = length(origin2);
+        float distance3 = length(origin3);
+        float distance4 = length(origin4);
+        float time = getUserTime().x;
+
+        float wave = sin(3.3 * PI * distance1 * 0.13 + time) * 0.125 +
+            sin(3.2 * PI * distance2 * 0.12 + time) * 0.125 +
+            sin(3.1 * PI * distance3 * 0.24 + time) * 0.125 +
+            sin(3.5 * PI * distance4 * 0.32 + time) * 0.125;
+        
+        if (wave * material.uv0.x > 0.0) {
+            vertexCoord.y += wave * material.uv0.x;
+        }
+        
+        material.worldPosition = vertexCoord;
+    }   
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.roughness = materialParams.ROUGHNESS;
+        material.ior = materialParams.IOR;
+        material.metallic = 0.0;
+        
+        float4 alpha = texture(materialParams_ALPHACOLOR_MAP, getUV0());
+        float time = getUserTime().x;
+        float2 panOffset = vec2(time * 0.45, time * 0.06);
+        float2 uv = getUV0() - panOffset;
+        
+        material.baseColor = texture(materialParams_ALPHACOLOR_MAP, uv);
+        material.baseColor.rgb *= material.baseColor.a;
+
+        material.emissive = vec4(vec3(materialParams.EMISSIVE_STRENGTH), 0.0);
+        material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
+        material.baseColor.a = alpha.r * 0.299+ alpha.g * 0.587 + alpha.b * 0.114 + 0.1;
+    }
+}
