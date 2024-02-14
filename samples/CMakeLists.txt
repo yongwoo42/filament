@@ -301,6 +301,7 @@ if (NOT ANDROID)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(wind_jit_view PRIVATE filameshio imageio)
+    target_link_libraries(hellomorphing PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 

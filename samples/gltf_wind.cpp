@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
         loadResources(filename);
         // FilamentInstance* instance = nullptr;
         app.viewer->setAsset(app.asset, app.instances[0]);
-        // quadSetup(engine, view, scene);
+        quadSetup(engine, view, scene);
     };
 
 

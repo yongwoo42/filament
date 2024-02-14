@@ -63,13 +63,16 @@ struct Vertex {
     filament::math::float2 uv;
 };
 
+const double HalfWidth = 10.52;
+const double HalfHeight = 2.67;
+
 Camera *cam;
 
 static const Vertex QUAD_VERTICES[4] = {
-    {{-12.8, -5.41}, {0, 0}},
-    {{ 12.8, -5.41}, {1, 0}},
-    {{-12.8,  5.41}, {0, 1}},
-    {{ 12.8,  5.41}, {1, 1}},
+    {{-HalfWidth, -HalfHeight}, {0, 0}},
+    {{ HalfWidth, -HalfHeight}, {1, 0}},
+    {{-HalfWidth,  HalfHeight}, {0, 1}},
+    {{ HalfWidth,  HalfHeight}, {1, 1}},
 };
 
 static constexpr uint16_t QUAD_INDICES[6] = {
@@ -156,16 +159,16 @@ static Material *WindMaterial(Engine *engine) {
         .doubleSided(true)
         .blending(BlendingMode::FADE)
         .transparencyMode(TransparencyMode::TWO_PASSES_TWO_SIDES)
-        .parameter("emissiveStrength", MaterialBuilder::UniformType::FLOAT)
-        .parameter("baseColorMap", MaterialBuilder::SamplerType::SAMPLER_2D)
-        .parameter("emissiveMap", MaterialBuilder::SamplerType::SAMPLER_2D)
-        .parameter("roughness", MaterialBuilder::UniformType::FLOAT)
-        .parameter("ior", MaterialBuilder::UniformType::FLOAT)
-        .parameter("alphaChannel", MaterialBuilder::SamplerType::SAMPLER_2D)
+        .parameter("EMISSIVE_STRENGTH", MaterialBuilder::UniformType::FLOAT)
+        .parameter("BASECOLOR_MAP", MaterialBuilder::SamplerType::SAMPLER_2D)
+        .parameter("ROUGHNESS", MaterialBuilder::UniformType::FLOAT)
+        .parameter("IOR", MaterialBuilder::UniformType::FLOAT)
+        .parameter("ALPHACOLOR_MAP", MaterialBuilder::SamplerType::SAMPLER_2D)
+        .shading(Shading::LIT)
         .materialVertex(R"SHADER(
             void materialVertex(inout MaterialVertexInputs material) {
                 vec4 vertexCoord = material.worldPosition;
-                float boundary = 100.0;
+                float boundary = 50.0;
                 vec2 origin1 = vertexCoord.xz + vec2(boundary, boundary);
                 vec2 origin2 = vertexCoord.xz + vec2(-boundary, boundary);
                 vec2 origin3 = vertexCoord.xz + vec2(boundary, -boundary);
@@ -175,14 +178,19 @@ static Material *WindMaterial(Engine *engine) {
                 float distance2 = length(origin2);
                 float distance3 = length(origin3);
                 float distance4 = length(origin4);
-                float time = getUserTime().x;
+                float time = getUserTime().x * 2.0;
 
                 float wave = sin(3.3 * PI * distance1 * 0.13 + time) * 0.125 +
                     sin(3.2 * PI * distance2 * 0.12 + time) * 0.125 +
                     sin(3.1 * PI * distance3 * 0.24 + time) * 0.125 +
                     sin(3.5 * PI * distance4 * 0.32 + time) * 0.125;
+            
                 
-                vertexCoord.y += wave * material.uv0.x;
+                // if (wave > 0.0) {
+                //     vertexCoord.y += wave * material.uv0.x;
+                // }
+                
+                // vertexCoord.x += wave * 0.1;
                 
                 material.worldPosition = vertexCoord;
             }
@@ -190,25 +198,24 @@ static Material *WindMaterial(Engine *engine) {
         .material(R"SHADER(
             void material(inout MaterialInputs material) {
                 prepareMaterial(material);
-                material.roughness = materialParams.roughness;
-                material.ior = materialParams.ior;
+                material.roughness = materialParams.ROUGHNESS;
+                material.ior = materialParams.IOR;
                 material.metallic = 0.0;
 
-                float4 alpha = texture(materialParams_alphaChannel, getUV0());
+                float4 alpha = texture(materialParams_ALPHACOLOR_MAP, getUV0());
                 float time = getUserTime().x;
-                highp float2 panOffset = vec2(time * 0.8, time * 0.01);
-                highp float2 uv = getUV0() - panOffset;
-
-                material.baseColor = texture(materialParams_baseColorMap, uv);
+                float2 panOffset = vec2(time * 0.45, time * 0.06);
+                // float2 uv = getUV0() - panOffset;
+                float2 uv = getUV0();
+                
+                material.baseColor = texture(materialParams_ALPHACOLOR_MAP, uv);
                 material.baseColor.rgb *= material.baseColor.a;
 
-                material.emissive = vec4(vec3(materialParams.emissiveStrength), 0.0);
-                material.emissive *= texture(materialParams_baseColorMap, uv);
-                
+                material.emissive = vec4(vec3(materialParams.EMISSIVE_STRENGTH), 0.0);
+                material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
                 material.baseColor.a = alpha.r * 0.299+ alpha.g * 0.587 + alpha.b * 0.114;
             }
-        )SHADER")
-        .shading(Shading::LIT);
+        )SHADER");
     Package pkg = builder.build(engine->getJobSystem());
 
     return Material::Builder().package(pkg.getData(), pkg.getSize())
@@ -251,13 +258,17 @@ static void createQuadRenderable(QuadInfo &quadInfo) {
                 IndexBuffer::BufferDescriptor(QUAD_INDICES, 12, nullptr));
     quadInfo.renderable = EntityManager::get().create();
     RenderableManager::Builder(1)
-                .boundingBox({{ -12.8, -5.41, -5 }, { 12.8, 5.41, -5 }})
+                .boundingBox({{ -HalfWidth, -HalfHeight, -5 }, { HalfWidth, HalfHeight, -5 }})
                 .material(0, quadInfo.matInstance)
                 .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, quadInfo.vb, quadInfo.ib, 0, 6)
                 .culling(false)
                 .receiveShadows(false)
                 .castShadows(false)
                 .build(*quadInfo.engine, quadInfo.renderable);    
+}
+
+static float degree_to_radian(float degree) {
+    return 180.0f / M_PI * degree;
 }
 
 
@@ -275,7 +286,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     cam = engine->createCamera(utils::EntityManager::get().create());
     view->setCamera(cam);
-    cam->setProjection(Camera::Projection::ORTHO, -12.8, 12.8, -5.41, 5.41, -5.0, 0.0);
+    cam->setProjection(Camera::Projection::ORTHO,
+        -HalfWidth, HalfWidth, -HalfHeight, HalfHeight,
+        -5.0, 1.0);
 
     MaterialBuilder::init();
     Material *windMaterial = WindMaterial(engine);
@@ -288,17 +301,16 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
 
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("baseColorMap", basecolor, sampler);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("emissiveMap", basecolor, sampler);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("roughness", 0.482f);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("ior", 1.5f);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("alphaChannel", alphaChannel, sampler);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("emissiveStrength", 2.0f);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("BASECOLOR_MAP", basecolor, sampler);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("ROUGHNESS", 0.482f);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("IOR", 1.5f);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("ALPHACOLOR_MAP", alphaChannel, sampler);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("EMISSIVE_STRENGTH", 2.0f);
 
     g_materialInstances.getMaterialInstance(quadMaterialName)->setParameter("albedo", quadTexture, sampler);
     quadInfo.matInstance = g_materialInstances.getMaterialInstance(quadMaterialName);
-    createQuadRenderable(quadInfo);
-    scene->addEntity(quadInfo.renderable);
+    // createQuadRenderable(quadInfo);
+    // scene->addEntity(quadInfo.renderable);
 
     auto& tcm = engine->getTransformManager();
     for (const auto& filename : g_filenames) {
@@ -306,13 +318,21 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         if (mesh.renderable) {
             auto ei = tcm.getInstance(mesh.renderable);
             
-            tcm.setTransform(ei, mat4f{ mat3f(15.0f), float3(0.0f, -0.1f, 1.0f) } *
+            tcm.setTransform(ei,
+                    mat4f::translation(float3{ 0, 0, 0}) *
+                    mat4f::rotation(degree_to_radian(30.0f), float3{ 1, 0, 0 })
+            ); 
+            tcm.setTransform(ei, mat4f{mat3{12.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 14.0},
+                                        float3(0.0f, 0.0f, 1.0f) } *
                                  tcm.getWorldTransform(ei));
             scene->addEntity(mesh.renderable);
             g_meshes.push_back(mesh);
         }
     }
 }
+
+
+
 
 int main(int argc, char* argv[]) {
     utils::Path filename = "wind_assets/wind.filamesh";
