@@ -89,8 +89,8 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
-const double HalfWidth = 3.0;
-const double HalfHeight = 3.0;
+const double HalfWidth = 10.0;
+const double HalfHeight = 10.0;
 
 struct App {
     Engine* engine;
@@ -258,10 +258,10 @@ int main(int argc, char** argv) {
 
         app.loader = AssetLoader::create({engine, app.materials, app.names });
 
-        // cam = engine->createCamera(utils::EntityManager::get().create());
-        // view->setCamera(cam);
-        // cam->setProjection(Camera::Projection::ORTHO, 
-        //     -HalfWidth, HalfWidth, -HalfHeight, HalfHeight, -10.0, 10.0);
+        cam = engine->createCamera(utils::EntityManager::get().create());
+        view->setCamera(cam);
+        cam->setProjection(Camera::Projection::ORTHO, 
+            -HalfWidth, HalfWidth, -HalfHeight, HalfHeight, -10.0, 10.0);
         auto materialCount = app.loader->getMaterialsCount();
         std::cout << "material count: " << materialCount << std::endl;
 
@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
             app.asset = app.loader->createInstancedAsset(
                     GLTF_WIND_WIND_AIR_EFFECT_DATA, GLTF_WIND_WIND_AIR_EFFECT_SIZE,
                     app.instances.data(), app.instances.size());
-            std::cout << "scene count : " << app.asset-> << std::endl;
+            std::cout << "scene count : " << app.asset->getSceneCount() << std::endl;
         } else {
             loadAsset(filename);
         }
@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
 
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.animate(animate);
-    filamentApp.resize(resize);
+    // filamentApp.resize(resize);
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender);
 

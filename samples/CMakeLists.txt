@@ -210,6 +210,7 @@ set_target_properties(gltf-wind-resources PROPERTIES FOLDER Samples/Resources)
 
 set(GLTF_WIND_RESOURCES
     ${ROOT_DIR}/assets/models/wind/wind_air_effect.glb
+    ${ROOT_DIR}/assets/models/wind/wind_single.glb
     ${MATERIAL_DIR}/airVent.filamat
 )
 
