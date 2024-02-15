@@ -94,7 +94,7 @@ public:
      * Adds the asset's ready-to-render entities into the scene.
      *
      * This is used for asychronous loading. It can be called once per frame to gradually add
-     * entities into the scene as their textures are loaded.
+     * entities into the scene as their text1ures are loaded.
      */
     void populateScene();
 

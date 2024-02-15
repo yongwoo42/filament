@@ -1064,8 +1064,10 @@ int main(int argc, char** argv) {
         // these values represent a point somewhere on Earth's surface
         float const d = app.originIsFarAway ? app.originDistance : 0.0f;
 //        tcm.setTransform(root, mat4::translation(double3{ 67.0, -6366759.0, -21552.0 } * d));
+        // tcm.setTransform(root, mat4::translation(
+        //         double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
         tcm.setTransform(root, mat4::translation(
-                double3{ 2304097.1410110965, -4688442.9915525438, -3639452.5611694567 } * d));
+                        double3{0.0, 10.0, 0}));
 
         // Check if color grading has changed.
         ColorGradingSettings const& options = app.viewer->getSettings().view.colorGrading;

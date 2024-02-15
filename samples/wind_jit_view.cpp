@@ -157,6 +157,8 @@ static Material *WindMaterial(Engine *engine) {
         .optimization(MaterialBuilderBase::Optimization::NONE)
         .require(VertexAttribute::UV0)
         .doubleSided(true)
+        .depthCulling(false)
+        // .culling(MaterialBuilder::CullingMode::NONE)
         .blending(BlendingMode::FADE)
         .transparencyMode(TransparencyMode::TWO_PASSES_TWO_SIDES)
         .parameter("EMISSIVE_STRENGTH", MaterialBuilder::UniformType::FLOAT)
@@ -191,8 +193,8 @@ static Material *WindMaterial(Engine *engine) {
                 // }
                 
                 // vertexCoord.x += wave * 0.1;
-                
                 material.worldPosition = vertexCoord;
+                
             }
         )SHADER")
         .material(R"SHADER(
@@ -214,6 +216,9 @@ static Material *WindMaterial(Engine *engine) {
                 material.emissive = vec4(vec3(materialParams.EMISSIVE_STRENGTH), 0.0);
                 material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
                 material.baseColor.a = alpha.r * 0.299+ alpha.g * 0.587 + alpha.b * 0.114;
+                if (getWorldPosition().z < 1.0) {
+                    material.baseColor.a -= 0.5;
+                }
             }
         )SHADER");
     Package pkg = builder.build(engine->getJobSystem());
@@ -288,7 +293,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     view->setCamera(cam);
     cam->setProjection(Camera::Projection::ORTHO,
         -HalfWidth, HalfWidth, -HalfHeight, HalfHeight,
-        -5.0, 1.0);
+        -5.0, 0.0);
 
     MaterialBuilder::init();
     Material *windMaterial = WindMaterial(engine);
@@ -318,11 +323,11 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         if (mesh.renderable) {
             auto ei = tcm.getInstance(mesh.renderable);
             
-            tcm.setTransform(ei,
-                    mat4f::translation(float3{ 0, 0, 0}) *
-                    mat4f::rotation(degree_to_radian(30.0f), float3{ 1, 0, 0 })
-            ); 
-            tcm.setTransform(ei, mat4f{mat3{12.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 14.0},
+            // tcm.setTransform(ei,
+            //         mat4f::translation(float3{ 0, 0, 0}) *
+            //         mat4f::rotation(degree_to_radian(60.0f), float3{ 0, 1, 0 })
+            // ); 
+            tcm.setTransform(ei, mat4f{mat3{15.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 14.0},
                                         float3(0.0f, 0.0f, 1.0f) } *
                                  tcm.getWorldTransform(ei));
             scene->addEntity(mesh.renderable);

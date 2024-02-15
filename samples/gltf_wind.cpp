@@ -18,6 +18,8 @@
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
 
+#include <filament/Camera.h>
+
 #include <filament/Engine.h>
 #include <filament/Scene.h>
 #include <filament/Skybox.h>
@@ -87,6 +89,8 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
+const double HalfWidth = 3.0;
+const double HalfHeight = 3.0;
 
 struct App {
     Engine* engine;
@@ -100,11 +104,11 @@ struct App {
     ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
     std::vector<FilamentInstance*> instances;
-
     // quad
     Texture* quadTex;
     VertexBuffer* quadVertexBuffer;
     IndexBuffer* quadIndexBuffer;
+
     Material* quadMaterial;
     MaterialInstance* quadMaterialInstance;
     Entity renderable;
@@ -116,13 +120,17 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
     return in.tellg();
 }
 
+
+Camera *cam;
+
+
 int main(int argc, char** argv) {
     App app;
     app.config.title = "Wind GLTF";
     app.config.backend = Engine::Backend::OPENGL;
     
     app.instances.resize(1);
-    // app.materialSource = UBERSHADER;
+    app.materialSource = UBERSHADER;
 
     utils::Path filename;
     auto loadAsset = [&app](utils::Path filename) {
@@ -172,10 +180,10 @@ int main(int argc, char** argv) {
             exit(1);
         }
 
-        auto ibl = FilamentApp::get().getIBL();
-        if (ibl) {
-            app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
-        }
+        // auto ibl = FilamentApp::get().getIBL();
+        // if (ibl) {
+        //     app.viewer->setIndirectLight(ibl->getIndirectLight(), ibl->getSphericalHarmonics());
+        // }
     };
 
     auto quadSetup = [&app](Engine* engine, View* view, Scene *scene) {
@@ -235,7 +243,7 @@ int main(int argc, char** argv) {
                 .receiveShadows(false)
                 .castShadows(false)
                 .build(*engine, app.renderable);
-        scene->addEntity(app.renderable);    
+        // scene->addEntity(app.renderable);
     };
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
@@ -246,15 +254,23 @@ int main(int argc, char** argv) {
         app.materials = (app.materialSource == JITSHADER) ?
                 createJitShaderProvider(engine) :
                 createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+        // engine->enableAccurateTranslations();
 
         app.loader = AssetLoader::create({engine, app.materials, app.names });
+
+        // cam = engine->createCamera(utils::EntityManager::get().create());
+        // view->setCamera(cam);
+        // cam->setProjection(Camera::Projection::ORTHO, 
+        //     -HalfWidth, HalfWidth, -HalfHeight, HalfHeight, -10.0, 10.0);
         auto materialCount = app.loader->getMaterialsCount();
         std::cout << "material count: " << materialCount << std::endl;
 
         if (filename.isEmpty()) {
+            std::cout << "file empty load default glb" << std::endl;
             app.asset = app.loader->createInstancedAsset(
-                    GLTF_WIND_WIND_SINGLE_DATA, GLTF_WIND_WIND_SINGLE_SIZE,
+                    GLTF_WIND_WIND_AIR_EFFECT_DATA, GLTF_WIND_WIND_AIR_EFFECT_SIZE,
                     app.instances.data(), app.instances.size());
+            std::cout << "scene count : " << app.asset-> << std::endl;
         } else {
             loadAsset(filename);
         }
@@ -262,7 +278,7 @@ int main(int argc, char** argv) {
         loadResources(filename);
         // FilamentInstance* instance = nullptr;
         app.viewer->setAsset(app.asset, app.instances[0]);
-        quadSetup(engine, view, scene);
+        // quadSetup(engine, view, scene);
     };
 
 
@@ -283,9 +299,17 @@ int main(int argc, char** argv) {
         app.resourceLoader->asyncUpdateLoad();
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
+        app.viewer->applyAnimation(now);
     };
 
     auto gui = [&app](Engine* engine, View* view) { };
+
+    auto resize = [&app](Engine*, View* view) {
+        Camera& camera = view->getCamera();
+        const Viewport& vp = view->getViewport();
+        double const aspectRatio = (double) vp.width / vp.height;
+        camera.setScaling({1.0 / aspectRatio, 1.0 });
+    };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { 
         ; // do nothing now
@@ -293,6 +317,7 @@ int main(int argc, char** argv) {
 
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.animate(animate);
+    filamentApp.resize(resize);
 
     filamentApp.run(app.config, setup, cleanup, gui, preRender);
 
