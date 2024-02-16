@@ -47,7 +47,9 @@
 #include <string>
 
 #include <math/mat4.h>
+#include <mathio/ostream.h>
 #include <stb_image.h>
+#include <imgui.h>
 
 #include "generated/resources/gltf_wind.h"
 
@@ -89,8 +91,8 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
-const double HalfWidth = 10.0;
-const double HalfHeight = 10.0;
+const double HalfWidth = 5;
+const double HalfHeight = 5;
 
 struct App {
     Engine* engine;
@@ -152,6 +154,8 @@ int main(int argc, char** argv) {
         // Parse the glTF file and create Filament entities.
         app.asset = app.loader->createInstancedAsset(buffer.data(), buffer.size(),
                 app.instances.data(), app.instances.size());
+        Aabb aabb = app.asset->getBoundingBox();
+        std::cout << "center: " << aabb.center() << std::endl;
         buffer.clear();
         buffer.shrink_to_fit();
 
@@ -261,7 +265,7 @@ int main(int argc, char** argv) {
         cam = engine->createCamera(utils::EntityManager::get().create());
         view->setCamera(cam);
         cam->setProjection(Camera::Projection::ORTHO, 
-            -HalfWidth, HalfWidth, -HalfHeight, HalfHeight, -10.0, 10.0);
+            -HalfWidth, HalfWidth, -HalfHeight, HalfHeight, -1000.0, 1000.0);
         auto materialCount = app.loader->getMaterialsCount();
         std::cout << "material count: " << materialCount << std::endl;
 
@@ -270,15 +274,21 @@ int main(int argc, char** argv) {
             app.asset = app.loader->createInstancedAsset(
                     GLTF_WIND_WIND_AIR_EFFECT_DATA, GLTF_WIND_WIND_AIR_EFFECT_SIZE,
                     app.instances.data(), app.instances.size());
-            std::cout << "scene count : " << app.asset->getSceneCount() << std::endl;
+
         } else {
             loadAsset(filename);
         }
 
         loadResources(filename);
-        // FilamentInstance* instance = nullptr;
-        app.viewer->setAsset(app.asset, app.instances[0]);
-        // quadSetup(engine, view, scene);
+        FilamentInstance* instance = app.instances[0];
+        std::cout << "entity count: " << instance->getEntityCount() << std::endl;
+        instance->recomputeBoundingBoxes();
+        auto aabb = instance->getBoundingBox();
+        std::cout << "aabb center: " << aabb.center() << std::endl;
+        app.viewer->setAsset(app.asset, instance);
+        // auto& tcm = engine->getTransformManager();
+        // auto transformRoot = tcm.getInstance(instance->getRoot());
+        // tcm.setTransform(transformRoot, mat4f::rotation(-90.0 * M_PI / 180.0, float3{ 0, 1, 0 }));
     };
 
 
@@ -300,19 +310,23 @@ int main(int argc, char** argv) {
         app.viewer->updateRootTransform();
         app.viewer->populateScene();
         app.viewer->applyAnimation(now);
+        // FilamentInstance* instance = app.instances[0];
+        // auto& tcm = engine->getTransformManager();
+        // auto transformRoot = tcm.getInstance(instance->getRoot());
+        // tcm.setTransform(transformRoot, mat4f::rotation(now, float3{ 0, 1, 0 }));
     };
 
     auto gui = [&app](Engine* engine, View* view) { };
 
     auto resize = [&app](Engine*, View* view) {
-        Camera& camera = view->getCamera();
-        const Viewport& vp = view->getViewport();
-        double const aspectRatio = (double) vp.width / vp.height;
-        camera.setScaling({1.0 / aspectRatio, 1.0 });
+        // Camera& camera = view->getCamera();
+        // const Viewport& vp = view->getViewport();
+        // double const aspectRatio = (double) vp.width / vp.height;
+        // camera.setScaling({1.0 / aspectRatio, 1.0 });
     };
 
     auto preRender = [&app](Engine* engine, View* view, Scene* scene, Renderer* renderer) { 
-        ; // do nothing now
+     
     };
 
     FilamentApp& filamentApp = FilamentApp::get();
