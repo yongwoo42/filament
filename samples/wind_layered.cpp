@@ -63,30 +63,7 @@ struct Vertex {
     filament::math::float2 uv;
 };
 
-const double HalfWidth = 10.52;
-const double HalfHeight = 2.67;
 
-Camera *cam;
-
-static const Vertex QUAD_VERTICES[4] = {
-    {{-HalfWidth, -HalfHeight}, {0, 0}},
-    {{ HalfWidth, -HalfHeight}, {1, 0}},
-    {{-HalfWidth,  HalfHeight}, {0, 1}},
-    {{ HalfWidth,  HalfHeight}, {1, 1}},
-};
-
-static constexpr uint16_t QUAD_INDICES[6] = {
-    0, 1, 2,
-    3, 2, 1,
-};
-
-struct QuadInfo {
-    Engine *engine;
-    VertexBuffer* vb;
-    IndexBuffer* ib;
-    MaterialInstance* matInstance;
-    Entity renderable;
-};
 
 static void cleanup(Engine* engine, View* view, Scene* scene) {
     std::vector<filament::MaterialInstance*> materialList(g_materialInstances.numRegistered());
@@ -183,11 +160,13 @@ static Material *WindMaterial(Engine *engine) {
                 float4 alpha = texture(materialParams_ALPHACOLOR_MAP, getUV0());
                 float time = getUserTime().x;
                 float2 panOffset = vec2(time * 0.45, time * 0.06);
-                // float2 uv = getUV0() - panOffset;
-                float2 uv = getUV0();
+                float2 uv = getUV0() - panOffset;
+                // float2 uv = getUV0();
+                material.baseColor = texture(materialParams_BASECOLOR_MAP, uv);
+                // material.baseColor.rgb *= material.baseColor.a;
 
-                material.emissive = texture(materialParams_BASECOLOR_MAP, uv);
-                // material.emissive = vec4(vec3(materialParams.EMISSIVE_STRENGTH), 0.0);
+                // material.emissive = texture(materialParams_BASECOLOR_MAP, uv);
+                material.emissive = vec4(vec3(materialParams.EMISSIVE_STRENGTH), 0.0);
                 // material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
                 
             }
@@ -198,50 +177,6 @@ static Material *WindMaterial(Engine *engine) {
             .build(*engine);
 }
 
-static Material *QuadMaterial(Engine *engine) {
-    MaterialBuilder quadBuilder;
-    quadBuilder.name("QuadMaterial")
-        .targetApi(MaterialBuilder::TargetApi::OPENGL)
-        .optimization(MaterialBuilderBase::Optimization::NONE)
-        .require(VertexAttribute::UV0)
-        .parameter("albedo", MaterialBuilder::SamplerType::SAMPLER_2D)
-        .material(R"SHADER(
-            void material(inout MaterialInputs material) {
-                prepareMaterial(material);
-                material.baseColor.rgb = texture(materialParams_albedo, getUV0()).rgb;
-            }
-        )SHADER")
-        .shading(Shading::UNLIT);
-    Package pkg = quadBuilder.build(engine->getJobSystem());
-    return Material::Builder().package(pkg.getData(), pkg.getSize())
-            .build(*engine);
-}
-
-static void createQuadRenderable(QuadInfo &quadInfo) {
-    quadInfo.vb = VertexBuffer::Builder()
-                .vertexCount(4)
-                .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
-                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
-                .build(*quadInfo.engine);
-    quadInfo.vb->setBufferAt(*quadInfo.engine, 0,
-        VertexBuffer::BufferDescriptor(QUAD_VERTICES, 64, nullptr));
-    quadInfo.ib = IndexBuffer::Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer::IndexType::USHORT)
-                .build(*quadInfo.engine);    
-    quadInfo.ib->setBuffer(*quadInfo.engine,
-                IndexBuffer::BufferDescriptor(QUAD_INDICES, 12, nullptr));
-    quadInfo.renderable = EntityManager::get().create();
-    RenderableManager::Builder(1)
-                .boundingBox({{ -HalfWidth, -HalfHeight, -5 }, { HalfWidth, HalfHeight, -5 }})
-                .material(0, quadInfo.matInstance)
-                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, quadInfo.vb, quadInfo.ib, 0, 6)
-                .culling(false)
-                .receiveShadows(false)
-                .castShadows(false)
-                .build(*quadInfo.engine, quadInfo.renderable);    
-}
 
 static float degree_to_radian(float degree) {
     return 180.0f / M_PI * degree;
@@ -256,50 +191,45 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         return;
     }
 
-    QuadInfo quadInfo;
-    quadInfo.engine = engine;
 
-    // cam = engine->createCamera(utils::EntityManager::get().create());
-    // view->setCamera(cam);
-    // cam->setProjection(Camera::Projection::ORTHO,
-    //     -HalfWidth, HalfWidth, -HalfHeight, HalfHeight,
-    //     -5.0, 0.0);
 
     MaterialBuilder::init();
     Material *windMaterial = WindMaterial(engine);
     const utils::CString windMaterialName("DefaultMaterial");
     g_materialInstances.registerMaterialInstance(windMaterialName, windMaterial->createInstance());
-    Material *quadMaterial = QuadMaterial(engine);
-    const utils::CString quadMaterialName("QuadMaterial");
-    g_materialInstances.registerMaterialInstance(quadMaterialName, quadMaterial->createInstance());
 
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
 
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("BASECOLOR_MAP", basecolor, sampler);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("ROUGHNESS", 0.482f);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("IOR", 1.5f);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("ALPHACOLOR_MAP", basecolor, sampler);
-    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter("EMISSIVE_STRENGTH", 2.0f);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "BASECOLOR_MAP", basecolor, sampler);
 
-    g_materialInstances.getMaterialInstance(quadMaterialName)->setParameter("albedo", quadTexture, sampler);
-    quadInfo.matInstance = g_materialInstances.getMaterialInstance(quadMaterialName);
-    // createQuadRenderable(quadInfo);
-    // scene->addEntity(quadInfo.renderable);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "ROUGHNESS", 0.482f);
+
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "IOR", 1.5f);
+
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "ALPHACOLOR_MAP", basecolor, sampler);
+
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "EMISSIVE_STRENGTH", 2.0f);
 
     auto& tcm = engine->getTransformManager();
     for (const auto& filename : g_filenames) {
         MeshReader::Mesh mesh  = MeshReader::loadMeshFromFile(engine, filename, g_materialInstances);
         if (mesh.renderable) {
             auto ei = tcm.getInstance(mesh.renderable);
-            
             // tcm.setTransform(ei,
             //         mat4f::translation(float3{ 0, 0, 0}) *
             //         mat4f::rotation(degree_to_radian(60.0f), float3{ 0, 1, 0 })
             // ); 
-            tcm.setTransform(ei, mat4f{mat3{15.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 14.0},
-                                        float3(0.0f, 0.0f, 1.0f) } *
-                                 tcm.getWorldTransform(ei));
+            tcm.setTransform(ei,
+                    mat4f::translation(float3{ 0, 0, 0}));
+            // tcm.setTransform(ei, mat4f{mat3{3.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 3.0},
+            //                             float3(0.0f, 0.0f, 1.0f) } *
+            //                      tcm.getWorldTransform(ei));
             scene->addEntity(mesh.renderable);
             g_meshes.push_back(mesh);
         }
@@ -316,19 +246,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // auto resize = [](Engine*, View* view) {
-    //     Camera& camera = view->getCamera();
-    //     const Viewport& vp = view->getViewport();
-    //     double const aspectRatio = (double) vp.width / vp.height;
-    //     camera.setScaling({1.0 / aspectRatio, 1.0 });
-    // };
     g_filenames.push_back(filename);
     
     g_config.title = "air vent";
     
     FilamentApp& filamentApp = FilamentApp::get();
-    // filamentApp.resize(resize);
-
     filamentApp.run(g_config, setup, cleanup,
         FilamentApp::ImGuiCallback(),
         FilamentApp::PreRenderCallback(),
