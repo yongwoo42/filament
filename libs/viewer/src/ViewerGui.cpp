@@ -34,6 +34,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 using namespace filagui;
 using namespace filament::math;
@@ -435,6 +436,7 @@ void ViewerGui::populateScene() {
     static constexpr int kNumAvailable = 128;
     utils::Entity renderables[kNumAvailable];
     while (size_t numWritten = mAsset->popRenderables(renderables, kNumAvailable)) {
+        std::cout << "populateScene : " << numWritten << std::endl;
         mAsset->addEntitiesToScene(*mScene, renderables, numWritten, mVisibleScenes);
     }
 }

@@ -340,7 +340,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
 
 int main(int argc, char* argv[]) {
-    utils::Path filename = "wind_assets/wind.filamesh";
+    // utils::Path filename = "wind_assets/wind.filamesh";
+    utils::Path filename = "wind.filamesh";
     if (!filename.exists()) {
         std::cerr << "file not found!" << std::endl;
         return 1;
@@ -354,7 +355,7 @@ int main(int argc, char* argv[]) {
     filamentApp.run(g_config, setup, cleanup,
         FilamentApp::ImGuiCallback(),
         FilamentApp::PreRenderCallback(),
-        FilamentApp::PostRenderCallback(), 2560, 980);
+        FilamentApp::PostRenderCallback(), 1200, 800);
 
     return 0;
 }
