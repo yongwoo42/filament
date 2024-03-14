@@ -81,6 +81,7 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
     }
 }
 
+
 Texture* loadImage(Engine* engine, const char* name) {
     Path path(name);
     if (path.exists()) {
@@ -126,6 +127,9 @@ Texture* loadImage(Engine* engine, const char* name) {
     return nullptr;
 }
 
+
+
+
 static Material *WindMaterial(Engine *engine) {
     MaterialBuilder builder;
     builder
@@ -138,12 +142,29 @@ static Material *WindMaterial(Engine *engine) {
         .culling(MaterialBuilder::CullingMode::NONE)
         .blending(BlendingMode::FADE)
         .transparencyMode(TransparencyMode::TWO_PASSES_TWO_SIDES)
-        // .parameter("BASECOLOR_MAP", MaterialBuilder::SamplerType::SAMPLER_2D)
-        // .parameter("ALPHACOLOR_MAP", MaterialBuilder::SamplerType::SAMPLER_2D)
+        .parameter("MASK_TEXTURE", MaterialBuilder::SamplerType::SAMPLER_2D)
         .shading(Shading::UNLIT)
         .materialVertex(R"SHADER(
             void materialVertex(inout MaterialVertexInputs material) {
                 vec4 vertexCoord = material.worldPosition;
+                float boundary = 1.0;
+                vec2 origin1 = vertexCoord.xz + vec2(boundary, boundary);
+                vec2 origin2 = vertexCoord.xz + vec2(-boundary, boundary);
+                vec2 origin3 = vertexCoord.xz + vec2(boundary, -boundary);
+                vec2 origin4 = vertexCoord.xz + vec2(-boundary, -boundary);
+
+                float distance1 = length(origin1);
+                float distance2 = length(origin2);
+                float distance3 = length(origin3);
+                float distance4 = length(origin4);
+                float time = getUserTime().x * 2.0;
+
+                float wave = sin(3.3 * PI * distance1 * 0.13 + time) * 0.125 +
+                    sin(3.2 * PI * distance2 * 0.12 + time) * 0.125 +
+                    sin(3.1 * PI * distance3 * 0.24 + time) * 0.125 +
+                    sin(3.5 * PI * distance4 * 0.32 + time) * 0.125;
+            
+                vertexCoord.y += wave * 0.5 * (1.0 - material.uv0.y);
                 material.worldPosition = vertexCoord;
             }
         )SHADER")
@@ -213,21 +234,37 @@ static Material *WindMaterial(Engine *engine) {
             void material(inout MaterialInputs material) {
                 prepareMaterial(material);
                 float2 uv = getUV0();
+                float2 speed = float2(0.0, 0.5);
+                float time = getUserTime().x;
                 float nodeOut = 0.0;
+                float4 maskOut = float4(0.0);
+
+                float2 offset = speed * time;
+
+                float4 mask = texture(materialParams_MASK_TEXTURE, uv);
+
 
                 float2 afterTilingAndOffset = float2(0.0, 0.0);
                 tilingAndOffset(uv,
                     float2(3.0, 0.2),
-                    float2(0.0, 0.0),
+                    offset,
                     afterTilingAndOffset);
 
                 SimpleNoise_float(afterTilingAndOffset, 10.0, nodeOut);
 
-                power(nodeOut, 2.0, nodeOut);
+                power(nodeOut, 1.7, nodeOut);
 
-                material.baseColor.rgb = vec3(nodeOut, nodeOut, nodeOut);
+                maskOut = mask * nodeOut;
+
+                float4 color = maskOut;
+                material.baseColor.rgb = vec3(color[0], color[1], color[2]);
+                
+                material.baseColor.a = 0.0;
+                //material.baseColor.a = color[3];    
+                
+
                 // material.emissive = texture(materialParams_BASECOLOR_MAP, uv);
-                material.emissive = vec4(vec3(0.0), 0.0);
+                // material.emissive = vec4(vec3(0.0), 0.0);
                 // material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
                 
             }
@@ -245,12 +282,13 @@ static float degree_to_radian(float degree) {
 
 
 static void setup(Engine* engine, View* view, Scene* scene) {
-    // Texture* basecolor = loadImage(engine, "wind_layer_asset/Gradiant_Alpha_S.png");
-    // Texture* quadTexture = loadImage(engine, "wind_assets/hvac_panel_front_bg.png");
-    // if (!basecolor || !quadTexture) {
-    //     std::cerr << "Texture image missing" << std::endl;
-    //     return;
-    // }
+    Texture* maskSampler = loadImage(engine, "mask.png");
+    if (!maskSampler) {
+        std::cerr << "Texture image missing" << std::endl;
+        return;
+    }
+
+    // scene->setSkybox(Skybox::Builder().color({0.0, 0.78, 0.0, 1.0}).build(*engine));
 
     MaterialBuilder::init();
     Material *windMaterial = WindMaterial(engine);
@@ -260,11 +298,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
 
-    // g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
-    //     "BASECOLOR_MAP", basecolor, sampler);
-
-    // g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
-    //     "ALPHACOLOR_MAP", basecolor, sampler);
+    g_materialInstances.getMaterialInstance(windMaterialName)->setParameter(
+        "MASK_TEXTURE", maskSampler, sampler);
 
     auto& tcm = engine->getTransformManager();
     for (const auto& filename : g_filenames) {
@@ -277,7 +312,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             // ); 
             // tcm.setTransform(ei,
             //         mat4f::translation(float3{ 0, 0, 0}));
-            tcm.setTransform(ei, mat4f{ mat3f(0.5), float3(0.0f, 0.0f, -2.0f) } *
+            tcm.setTransform(ei, mat4f{ mat3f(10.0), float3(0.0f, 0.0f, -10.0f) } *
             tcm.getWorldTransform(ei));
             // tcm.setTransform(ei, mat4f{mat3{0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5},
             //                             float3(0.0f, 0.0f, 1.0f) } *
@@ -292,7 +327,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
 
 int main(int argc, char* argv[]) {
-    utils::Path filename = "rect.filamesh";
+    utils::Path filename = "wind_t2.filamesh";
     if (!filename.exists()) {
         std::cerr << "file not found!" << std::endl;
         return 1;
@@ -303,6 +338,8 @@ int main(int argc, char* argv[]) {
     g_config.title = "rect";
     
     FilamentApp& filamentApp = FilamentApp::get();
+
+
     filamentApp.run(g_config, setup, cleanup,
         FilamentApp::ImGuiCallback(),
         FilamentApp::PreRenderCallback(),
