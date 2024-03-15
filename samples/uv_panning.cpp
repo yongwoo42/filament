@@ -23,6 +23,7 @@
 #include <filament/VertexBuffer.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Skybox.h>
+#include <filament/IndirectLight.h>
 
 
 #include <math/mat3.h>
@@ -41,6 +42,7 @@
 
 #include <image/LinearImage.h>
 #include <imageio/ImageDecoder.h>
+const char* kIBLFolder = "assets/ibl/lightroom_14b";
 
 
 using namespace filament::math;
@@ -54,6 +56,7 @@ static std::vector<Path> g_filenames;
 
 static MeshReader::MaterialRegistry g_materialInstances;
 static std::vector<MeshReader::Mesh> g_meshes;
+static std::vector<Entity> g_lights;
 
 
 static Config g_config;
@@ -63,6 +66,28 @@ struct Vertex {
     filament::math::float2 uv;
 };
 
+IBL* load_IBL(const utils::Path& iblDirectory, Engine* engine) {
+    utils::Path iblPath(iblDirectory);
+
+    if (!iblPath.exists()) {
+        std::cerr << "The specified IBL path does not exist: " << iblPath << std::endl;
+        return nullptr;
+    }
+
+    if (!iblPath.isDirectory()) {
+        std::cerr << "The specified IBL path is not a directory: " << iblPath << std::endl;
+        return nullptr;
+    }
+
+    IBL* ibl= new IBL(*engine);
+    if (!ibl->loadFromDirectory(iblPath)) {
+        std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
+        delete ibl;
+        return nullptr;
+    }
+
+    return ibl;
+}
 
 
 static void cleanup(Engine* engine, View* view, Scene* scene) {
@@ -143,7 +168,7 @@ static Material *WindMaterial(Engine *engine) {
         .blending(BlendingMode::FADE)
         .transparencyMode(TransparencyMode::TWO_PASSES_TWO_SIDES)
         .parameter("MASK_TEXTURE", MaterialBuilder::SamplerType::SAMPLER_2D)
-        .shading(Shading::UNLIT)
+        .shading(Shading::LIT)
         .materialVertex(R"SHADER(
             void materialVertex(inout MaterialVertexInputs material) {
                 vec4 vertexCoord = material.worldPosition;
@@ -239,6 +264,10 @@ static Material *WindMaterial(Engine *engine) {
                 float nodeOut = 0.0;
                 float4 maskOut = float4(0.0);
 
+                material.metallic = 0.0;
+                material.roughness = 1.0;
+                material.clearCoat = 0.0;
+                material.reflectance = 0.0;
                 float2 offset = speed * time;
 
                 float4 mask = texture(materialParams_MASK_TEXTURE, uv);
@@ -252,19 +281,18 @@ static Material *WindMaterial(Engine *engine) {
 
                 SimpleNoise_float(afterTilingAndOffset, 10.0, nodeOut);
 
-                power(nodeOut, 1.7, nodeOut);
+                power(nodeOut, 3.0, nodeOut);
 
                 maskOut = mask * nodeOut;
 
                 float4 color = maskOut;
                 material.baseColor.rgb = vec3(color[0], color[1], color[2]);
-                
-                material.baseColor.a = 0.0;
-                //material.baseColor.a = color[3];    
-                
 
+                // material.baseColor.a = color[3];
+                material.baseColor.a = color[3];
+            
                 // material.emissive = texture(materialParams_BASECOLOR_MAP, uv);
-                // material.emissive = vec4(vec3(0.0), 0.0);
+                material.emissive = vec4(vec3(1.0), 0.0);
                 // material.emissive *= texture(materialParams_BASECOLOR_MAP, uv);
                 
             }
@@ -288,7 +316,25 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         return;
     }
 
-    // scene->setSkybox(Skybox::Builder().color({0.0, 0.78, 0.0, 1.0}).build(*engine));
+
+    auto& em = EntityManager::get();
+    g_lights.push_back(em.create());
+    LightManager::Builder(LightManager::Type::SUN)
+            .color(Color::toLinear<ACCURATE>(sRGBColor(1.0f, 1.0f, 1.0f)))
+            .intensity(10000000)
+            .direction({ 0.0, 0.0, 0.0 })
+            .sunAngularRadius(10.0f)
+            .castShadows(false)
+            .build(*engine, g_lights.back());
+    scene->addEntity(g_lights.back());
+
+
+    scene->setSkybox(Skybox::Builder().color({0.7, 0.7, 0.9, 1.0}).build(*engine));
+    view->setAmbientOcclusionOptions({ .enabled = true });
+    BloomOptions bloomOptions;
+    bloomOptions.enabled = true;
+    bloomOptions.strength = 1.0f;
+    // view->setBloomOptions(bloomOptions);
 
     MaterialBuilder::init();
     Material *windMaterial = WindMaterial(engine);

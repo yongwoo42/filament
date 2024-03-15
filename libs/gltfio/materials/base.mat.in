@@ -172,7 +172,13 @@ fragment {
                 material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
             }
         #endif
-
         ${CUSTOM_FRAGMENT}
+        {
+            highp float2 uv = getUV0();
+            float time = getUserTime().x;
+            float2 speed = float2(0.0, 0.5);
+            float2 offset = speed * time;
+            material.baseColor = texture(materialParams_baseColorMap, uv + offset);
+        }
     }
 }
